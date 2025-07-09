@@ -4,6 +4,7 @@ from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
 def Parker(r, U, cs, rc):
+    U = U[0]
     numerator = ((2*U*cs**2)/r)*(1-rc/r)
     denominator = (U**2 - cs**2)
     eps = 1e-12
@@ -15,16 +16,24 @@ def Parker(r, U, cs, rc):
     return [dUdr]  # Return as list
 
 AU = 1.496e11 #m
-r_min = 0.2*AU
-r_max = 1.1*AU
-r_eval = np.linspace(r_min, r_max, 30)
 
 M_sun = 1.989e30 #kg
-T0 = 1e6
+T0 = 1e3
 mu0 = 0.6
 cs = np.sqrt(2*const.k*T0/(mu0*const.m_p))
 U0 = 1.3*cs
+
 rc = const.G*M_sun/(2*cs)
+r_max = 1.1*AU
+r_min = 1.05*rc
+
+print(r_max, r_min)
+if r_max >= r_min:
+    print('r_max is larger than r_min as expected.')
+else:
+    print('r_max is less than r_min, potentially switch order.')
+
+r_eval = np.linspace(r_min, r_max, 100)
 
 try:
     sol = solve_ivp(Parker, [r_min, r_max], [U0], t_eval=r_eval, args=(cs, rc), method='BDF', rtol=1e-4, atol = 1e-6)
@@ -33,10 +42,12 @@ try:
         r_solution = sol.t/AU
         U_solution = sol.y[0]
         fig, ax1 = plt.subplots(figsize=(10, 5))
-        ax1.plot(r_solution, U_solution/1000, 'b-', linewidth=2, label='U(r)')
+        ax1.scatter(r_solution, U_solution/1000, color = 'b', marker = 'x', label='U(r) in km/s')
+        valid = r_solution*AU > rc
+        ax1.plot(r_solution[valid], 2*cs*np.sqrt(np.log(r_solution[valid]*AU/rc))/1000, color = 'k', linestyle = '--', label = 'Supersonic limit')
         ax1.set_xlabel('Distance (AU)')
         ax1.set_ylabel('Velocity (km/s)')
-        ax1.set_title('Solar Wind Velocity Profile')
+        ax1.set_title(f'Isothermal Solar Wind Velocity Profile at T = {T0}K')
         ax1.grid(True)
         ax1.axhline(y=cs/1000, color='r', linestyle='--', label=f'Sound speed ({cs/1000:.1f} km/s)')
         ax1.legend()
@@ -50,8 +61,8 @@ try:
         # ax2.set_title('Solar Wind Density Profile')
         # ax2.grid(True)
 
-        idx_1au = np.argmin(np.abs(r_solution - 1.0))
-        print(f"Velocity at 1 AU: {U_solution[idx_1au]/1000:.1f} km/s")
+        # idx_1au = np.argmin(np.abs(r_solution - 1.0))
+        # print(f"Velocity at 1 AU: {U_solution[idx_1au]/1000:.1f} km/s")
 
     else:
         print("Solution failed:", sol.message)
