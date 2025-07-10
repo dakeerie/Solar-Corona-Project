@@ -18,14 +18,14 @@ def Parker(r, U, cs, rc):
 AU = 1.496e11 #m
 
 M_sun = 1.989e30 #kg
-T0 = 1e3
-mu0 = 0.6
+T0 = 1e6 #K
+mu0 = 1
 cs = np.sqrt(2*const.k*T0/(mu0*const.m_p))
 U0 = 1.3*cs
 
 rc = const.G*M_sun/(2*cs)
 r_max = 1.1*AU
-r_min = 1.05*rc
+r_min = 710e8 #m solar radius
 
 print(r_max, r_min)
 if r_max >= r_min:
