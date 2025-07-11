@@ -16,6 +16,18 @@ r0 = 1.01*rc #m
 rho0 = 1e8*m_p #kg/m^3 Density boundary condition at r0, can be changed
 v0 = 1.01*cs
 
+#Integrate around critical point 
+eps = 1e-4
+r1 = rc * (1 - eps) #just behind critical point
+r2 = rc * (1 + eps) #just in front of critical point
+v1 = cs * (1 - eps) #boundary velocity just smaller than sound speed
+v2 = cs * (1 + eps) #boundary velocity just larger than sound speed
+
+r_min = R_sun
+r_max = 1e3 * R_sun
+r_eval1 = np.linspace(r_min, r1, 1000)
+r_eval2 = np.linspace(r2, r_max, 1000)
+
 #Equation for dv/dr to pass to solver
 def Parker(r, v):
     numerator = v*(2*cs**2)*(1-rc/r)
