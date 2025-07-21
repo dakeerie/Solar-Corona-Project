@@ -47,7 +47,7 @@ print(f'v(r0) = {v0/1e3} km/s')
 #Try solver 
 try:
     # sol_outer = solve_ivp(Parker, [r2, r_max], [v2], t_eval=r_eval2, method = 'BDF')
-    sol_inner = solve_ivp(Parker, [r_min, r1], [v1], t_eval=r_eval1, method = 'BDF')
+    sol_inner = solve_ivp(Parker, [r_min, r1], [v1], t_eval=r_eval1, method = 'Radau', rtol = 1e-8, atol = 1e-10)
     if sol_inner.success:
         print("Both solutions were successful.")
         # r_sol = np.concatenate([sol_inner.t, [rc], sol_outer.t])
