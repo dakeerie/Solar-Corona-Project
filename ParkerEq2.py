@@ -76,6 +76,8 @@ try:
         plt.xscale('log')
         # plt.yscale('log')
         plt.title('Wind Velocity Profile')
+        plt.text(1.1*rc/R_sun, plt.ylim()[0] - 0.06*(plt.ylim()[1] - plt.ylim()[0]), r'$r_c$', ha = 'center', va = 'bottom', fontsize = 13)
+        plt.text(plt.xlim()[0]*0.83, 0.9*cs/1e3, r'$c_s$', ha = 'left', va = 'center', fontsize = 13)
         plt.legend()
         plt.grid(True, which = 'both')
 
@@ -85,14 +87,14 @@ try:
         plt.plot(r_sol_R_sun, (const/m_p)/(2*cs*(r_sol**2)*np.sqrt(np.log(r_sol/rc))), color='k', linestyle=':', label=r'Analytic approximation, $\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
         plt.plot(r_sol_R_sun, n, linestyle = ':', color = 'red', label = r'Analytic approximation, eq. 11 from Kontar et al. 2023')
         plt.axvline(rc/R_sun, linestyle = '--', color = 'k', label = r'$r_c$ line')
-        plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15) #r in metres FOR NOW!!!
+        plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
         plt.ylabel(r'Density $(cm^{-3}$)', fontsize = 10)
         plt.title('Wind Density Profile')
         plt.yscale('log')
         plt.xscale('log')
+        # plt.text(1.1*rc/R_sun, plt.ylim()[0] - 0.06*(plt.ylim()[1] - plt.ylim()[0]), r'$r_c$', ha = 'center', va = 'bottom', fontsize = 13)
         plt.legend()
         plt.grid(True, which = 'both')
-
         plt.tight_layout()
         plt.show()  
 
