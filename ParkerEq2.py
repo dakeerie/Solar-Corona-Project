@@ -58,7 +58,7 @@ try:
         rho_sol = const/(v_sol*r_sol**2) #Density equation based on boundary conditions 
         r_sol_R_sun = r_sol/R_sun #r in units of solar radii
         v_sup = 2*cs*np.sqrt(np.log(r_sol/rc)) #Analytic velocity approximation 
-        # n = 4.8e9*(R_sun/r_sol)**14 + 3e8*(R_sun/r_sol)**6 + 1.4e6*(R_sun/r_sol)**2.3 #Analytic density approximation from Kontar et al. 2023
+        n = 4.8e9*(R_sun/r_sol)**14 + 3e8*(R_sun/r_sol)**6 + 1.4e6*(R_sun/r_sol)**2.3 #Analytic density approximation from Kontar et al. 2023
         
         valid = (r_sol > rc)
 
@@ -83,7 +83,7 @@ try:
         plt.subplot(1, 2, 2)
         plt.plot(r_sol_R_sun, rho_sol/(m_p) , label = r'$\rho(r)$')
         plt.plot(r_sol_R_sun, (const/m_p)/(2*cs*(r_sol**2)*np.sqrt(np.log(r_sol/rc))), color='k', linestyle=':', label=r'Analytic approximation, $\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
-        # plt.plot(r_sol_R_sun, n, linestyle = ':', color = 'red', label = r'Analytic approximation, eq. 11 from Kontar et al. 2023')
+        plt.plot(r_sol_R_sun, n, linestyle = ':', color = 'red', label = r'Analytic approximation, eq. 11 from Kontar et al. 2023')
         plt.axvline(rc/R_sun, linestyle = '--', color = 'k', label = r'$r_c$ line')
         plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15) #r in metres FOR NOW!!!
         plt.ylabel(r'Density $(cm^{-3}$)', fontsize = 10)
