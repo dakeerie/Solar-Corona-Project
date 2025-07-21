@@ -13,14 +13,14 @@ rc = G*M_sun/(2*cs**2) #m
 
 #Integrate around critical point 
 eps = 1e-3
-r1 = rc * (1 - eps) #just behind critical point
+r1 = rc * (1 - eps) #just behind critical point when viewed from Earth
 r2 = rc * (1 + eps) #just in front of critical point
 v1 = cs * (1 - eps) #boundary velocity just smaller than sound speed
 v2 = cs * (1 + eps) #boundary velocity just larger than sound speed
 
 #Generate r values and integration range
 r_min = R_sun
-r_max = 1e3 * R_sun
+r_max = 1e3*R_sun
 r_eval1 = np.linspace(r_min, r1, 1000)
 r_eval2 = np.linspace(r2, r_max, 1000)
 
@@ -35,7 +35,7 @@ def Parker(r, v):
     numerator = v*(2*cs**2)*(1-rc/r)
     denominator =  r*(v**2 - cs**2)
     result = numerator/denominator
-    return [result]
+    return result
 
 #Check inputs
 print(f'r_c = {rc/R_sun} solar radii')
@@ -46,14 +46,14 @@ print(f'v(r0) = {v0/1e3} km/s')
 
 #Try solver 
 try:
-    sol_outer = solve_ivp(Parker, [r2, r_max], [v2], t_eval=r_eval2, method = 'RK45')
-    # sol_inner = solve_ivp(Parker, [r_min, r1], [v1], t_eval=r_eval1, method = 'BDF', rtol = 1e-9, atol = 1e-12)
-    if sol_outer.success:
+    # sol_outer = solve_ivp(Parker, [r2, r_max], [v2], t_eval=r_eval2, method = 'BDF')
+    sol_inner = solve_ivp(Parker, [r_min, r1], [v1], t_eval=r_eval1, method = 'BDF')
+    if sol_inner.success:
         print("Both solutions were successful.")
         # r_sol = np.concatenate([sol_inner.t, [rc], sol_outer.t])
         # v_sol = np.concatenate([sol_inner.y[0], [cs], sol_outer.y[0]])
-        r_sol = sol_outer.t
-        v_sol = sol_outer.y[0]
+        r_sol = sol_inner.t
+        v_sol = sol_inner.y[0]
         const = rho0*v0*r0**2
         rho_sol = const/(v_sol*r_sol**2) #Density equation based on boundary conditions 
         r_sol_R_sun = r_sol/R_sun #r in units of solar radii
@@ -81,7 +81,7 @@ try:
         plt.legend()
         plt.grid(True, which = 'both')
 
-        #Density
+        # #Density
         plt.subplot(1, 2, 2)
         plt.plot(r_sol_R_sun, rho_sol/(m_p) , label = r'$\rho(r)$')
         plt.plot(r_sol_R_sun, (const/m_p)/(2*cs*(r_sol**2)*np.sqrt(np.log(r_sol/rc))), color='k', linestyle=':', label=r'Analytic approximation, $\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
