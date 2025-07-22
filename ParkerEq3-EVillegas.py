@@ -61,9 +61,21 @@ v_int.extend(v_ext)
 R_sol = R_int #dimensionless solutions
 v_sol = v_int #dimensionless solutions
 
-plt.plot(R_sol, v_sol)
+R_sol_dim = np.array(R_sol)*rc/R_sun
+v_sol_dim = np.array(v_sol)*cs/1e3
+
+plt.figure(figsize=(12, 5))
+plt.suptitle(f'Isothermal Solar Wind at T = {T:.2e} K')
+
+plt.subplot(1, 2, 1)
+plt.plot(R_sol_dim, v_sol_dim, label = r'$v(r)$')
+plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
+plt.ylabel(r'Velocity $(km \: s^{-1})$', fontsize = 10)
+plt.title('Wind Velocity Profile')
+plt.grid(True, which = 'both')
 plt.xscale('log')
-# plt.yscale('log')
+plt.legend()
 plt.show()
+
 
 
