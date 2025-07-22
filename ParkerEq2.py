@@ -81,7 +81,7 @@ try:
         plt.legend()
         plt.grid(True, which = 'both')
 
-        # #Density
+        # Number Density Plot
         plt.subplot(1, 2, 2)
         plt.plot(r_sol_R_sun, rho_sol/(m_p) , label = r'$\rho(r)$')
         plt.plot(r_sol_R_sun, (const/m_p)/(2*cs*(r_sol**2)*np.sqrt(np.log(r_sol/rc))), color='k', linestyle=':', label=r'Analytic approximation, $\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
