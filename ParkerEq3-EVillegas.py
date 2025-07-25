@@ -111,7 +111,7 @@ plt.plot(r_sol_R_sun[valid], rho_sup, color='k', linestyle='--', label=r'$\rho \
 plt.plot(r_sol_R_sun, n, linestyle = '--', color = 'red', label = r'Eq. 11 from Kontar et al. 2023')
 plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
 plt.ylabel(r'Density $(cm^{-3}$)', fontsize = 10)
-plt.plot(rc/R_sun, 1e8, 'x', color = 'magenta', label = 'Critical point' )
+plt.plot(r0/R_sun, rho0/m_p, 'x', color = 'magenta', label = 'Critical point' )
 plt.title('Wind Density Profile')
 plt.yscale('log')
 plt.xscale('log')
