@@ -46,8 +46,8 @@ R_max = r_max/rc #dimensionless
 
 #Boundary Conditions
 eps = 1e-4
-r0 = rc*(1+eps)/R_sun #solar radii
-v0 = cs*(1+eps)/1e3 #km/s
+r0 = rc*(1+eps) #m
+v0 = cs*(1+eps) #m/s
 rho0 = 1e8*m_p #kg cm^-3
 
 #Check inputs
@@ -67,23 +67,26 @@ print(f'rho(r0) = {rho0} kg/cm^3')
 R_int, v_int = RK4(Parker_ode, [1, 1-1e-6], R_min, 10000)
 R_int.reverse()
 v_int.reverse()
-R_ext, v_ext = RK4(Parker_ode, [1, 1+1e-6], R_max, 600000)
-R_int.extend(R_ext)
-v_int.extend(v_ext)
+R_ext1, v_ext1 = RK4(Parker_ode, [1, 1+1e-6], 3, 20000)
+R_ext2, v_ext2 = RK4(Parker_ode, [3, v_ext1[-1]], R_max, 10000)
+R_int.extend(R_ext1)
+v_int.extend(v_ext1)
+R_int.extend(R_ext2)
+v_int.extend(v_ext2)
 R_sol = R_int #dimensionless solutions
-v_sol = v_int #dimensionless solutions
+V_sol = v_int #dimensionless solutions
 #Add dimensions
 r_sol = np.array(R_sol)*rc #m
 r_sol_R_sun = r_sol/R_sun #solar radii
-v_sol = np.array(v_sol)*cs/1e3 #km/s
+v_sol = np.array(V_sol)*cs #m/s
 #Density profile
-const = rho0*v0*r0**2
-rho_sol = (const/m_p)*(v_sol*r_sol_R_sun**2)
+const = rho0*v0*r0**2 #kg/s
+rho_sol = (const)/(v_sol*r_sol**2) #kg/m^3
 
 #Analytical approximations
 valid = (r_sol > rc)
-v_sup = 2*cs*np.sqrt(np.log(r_sol[valid]/rc))/1e3 #km/s
-rho_sup = (const/m_p)/(2*cs*(r_sol[valid]**2)*np.sqrt(np.log(r_sol[valid]/rc)))
+v_sup = 2*cs*np.sqrt(np.log(r_sol[valid]/rc)) #m/s
+rho_sup = (const)/(2*m_p*cs*(r_sol[valid]**2)*np.sqrt(np.log(r_sol[valid]/rc)))
 n = 4.8e9*(R_sun/r_sol)**14 + 3e8*(R_sun/r_sol)**6 + 1.4e6*(R_sun/r_sol)**2.3 #Analytic density approximation from Kontar et al. 2023
 
 plt.figure(figsize=(12, 5))
@@ -91,22 +94,24 @@ plt.suptitle(f'Isothermal Solar Wind at T = {T:.2e} K')
 
 #Velocity Plot
 plt.subplot(1, 2, 1)
-plt.plot(r_sol_R_sun, v_sol, label = r'$v(r)$')
-plt.plot(r_sol_R_sun[valid], v_sup, color = 'k', linestyle = ':', label = r'Analytic approximation, $v(r) \gg c_s$')
+plt.plot(r_sol_R_sun, v_sol/1e3, label = r'$v(r)$')
+plt.plot(r_sol_R_sun[valid], v_sup/1e3, color = 'k', linestyle = '--', label = r'Analytic approximation, $v(r) \gg c_s$')
 plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
 plt.ylabel(r'Velocity $(km \: s^{-1})$', fontsize = 10)
 plt.title('Wind Velocity Profile')
+plt.plot(rc/R_sun, cs/1e3, 'x', color = 'magenta', label = 'Critical point' )
 plt.grid(True, which = 'both')
 plt.xscale('log')
 plt.legend(loc = 'upper right')
 
 #Number Density Plot
 plt.subplot(1, 2, 2)
-plt.plot(r_sol_R_sun, rho_sol, label = r'$\rho(r)$')
-plt.plot(r_sol_R_sun[valid], rho_sup, color='k', linestyle=':', label=r'$\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
-plt.plot(r_sol_R_sun, n, linestyle = ':', color = 'red', label = r'Eq. 11 from Kontar et al. 2023')
+plt.plot(r_sol_R_sun, rho_sol/m_p, label = r'$\rho(r)$')
+plt.plot(r_sol_R_sun[valid], rho_sup, color='k', linestyle='--', label=r'$\rho \propto \frac{1}{r^2 \sqrt{\ln{r}}}$')
+plt.plot(r_sol_R_sun, n, linestyle = '--', color = 'red', label = r'Eq. 11 from Kontar et al. 2023')
 plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
 plt.ylabel(r'Density $(cm^{-3}$)', fontsize = 10)
+plt.plot(rc/R_sun, 1e8, 'x', color = 'magenta', label = 'Critical point' )
 plt.title('Wind Density Profile')
 plt.yscale('log')
 plt.xscale('log')
