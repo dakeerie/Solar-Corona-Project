@@ -46,8 +46,8 @@ R_max = r_max/rc #dimensionless
 
 #Boundary Conditions
 eps = 1e-4
-r0 = rc*(1+eps) #m
-v0 = cs*(1+eps) #m/s
+r0 = R_sun #m
+v0 = 1000 #m/s
 rho0 = 1e8*m_p #kg cm^-3
 
 #Check inputs
@@ -89,6 +89,16 @@ v_sup = 2*cs*np.sqrt(np.log(r_sol[valid]/rc)) #m/s
 rho_sup = (const)/(2*m_p*cs*(r_sol[valid]**2)*np.sqrt(np.log(r_sol[valid]/rc)))
 n = 4.8e9*(R_sun/r_sol)**14 + 3e8*(R_sun/r_sol)**6 + 1.4e6*(R_sun/r_sol)**2.3 #Analytic density approximation from Kontar et al. 2023
 
+plt.figure(figsize = (6,5))
+plt.plot(r_sol_R_sun[0:100], v_sol[0:100]/1e3, label = r'$v(r)$')
+plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
+plt.ylabel(r'Velocity $(km \: s^{-1})$', fontsize = 10)
+plt.title('Wind Velocity Profile')
+plt.grid(True, which = 'both')
+plt.xscale('log')
+plt.legend(loc = 'upper right')
+plt.show()
+
 plt.figure(figsize=(12, 5))
 plt.suptitle(f'Isothermal Solar Wind at T = {T:.2e} K')
 
@@ -111,7 +121,7 @@ plt.plot(r_sol_R_sun[valid], rho_sup, color='k', linestyle='--', label=r'$\rho \
 plt.plot(r_sol_R_sun, n, linestyle = '--', color = 'red', label = r'Eq. 11 from Kontar et al. 2023')
 plt.xlabel(r'$\frac{r}{R_{\bigodot}}$', fontsize = 15)
 plt.ylabel(r'Density $(cm^{-3}$)', fontsize = 10)
-plt.plot(r0/R_sun, rho0/m_p, 'x', color = 'magenta', label = 'Critical point' )
+plt.plot(r0/R_sun, rho0/m_p, 'x', color = 'magenta', label = 'Boundary Condition')
 plt.title('Wind Density Profile')
 plt.yscale('log')
 plt.xscale('log')
@@ -120,6 +130,4 @@ plt.grid(True, which = 'both')
 
 plt.tight_layout()
 plt.show() 
-
-
 
