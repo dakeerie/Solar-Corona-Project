@@ -1,0 +1,280 @@
+"""
+PARKER WIND SHOOTING METHOD - READY-TO-RUN EXAMPLES
+====================================================
+
+This file shows exactly how to use the Parker wind code with different inputs.
+Simply uncomment the example you want to run and execute the script.
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.constants import G, k, m_p
+
+# ============================================================================
+# PASTE THE PARKERWNDSHOOTINGSOLVER CLASS HERE
+# (Copy the complete class from the previous code artifact)
+# ============================================================================
+
+class ParkerWindShootingSolver:
+    def __init__(self):
+        # [Copy the complete class implementation here]
+        # Physical constants
+        self.G = G                    
+        self.k = k                     
+        self.m_p = m_p               
+        self.M_sun = 1.9891e30       
+        self.R_sun = 6.96e8          
+        self.T = 1e6                 
+        self.mu = 1                  
+        self.cs = np.sqrt(self.k * self.T / (self.mu * self.m_p))  
+        self.rc = self.G * self.M_sun / (2 * self.cs**2)           
+        
+        print(f"=== PHYSICAL PARAMETERS ===")
+        print(f"Temperature: T = {self.T:.0e} K")
+        print(f"Sound speed: cs = {self.cs/1e3:.2f} km/s")
+        print(f"Critical radius: rc = {self.rc/self.R_sun:.2f} R☉")
+    
+    # [Include all other methods from the complete class...]
+    # For brevity, I'm showing the structure - use the complete class from the previous artifact
+
+# ============================================================================
+# EXAMPLE 1: YOUR ORIGINAL BOUNDARY CONDITIONS
+# ============================================================================
+
+def example_1_original_conditions():
+    """Test your original boundary conditions"""
+    print("=" * 60)
+    print("EXAMPLE 1: YOUR ORIGINAL CONDITIONS")
+    print("=" * 60)
+    
+    solver = ParkerWindShootingSolver()
+    
+    # YOUR INPUTS - Change these values to test different conditions
+    r0 = 6.96e8           # 1 solar radius (meters)
+    rho0 = 1e8 * m_p      # 10^8 particles/cm³ density (kg/m³)
+    v0_specified = 1000   # 1 km/s velocity (m/s)
+    
+    print(f"\n🔧 YOUR INPUTS:")
+    print(f"   Boundary radius: {r0/6.96e8:.1f} R☉")
+    print(f"   Boundary density: {rho0/m_p:.0e} particles/cm³")
+    print(f"   Specified velocity: {v0_specified/1e3} km/s")
+    
+    try:
+        results = solver.find_parker_consistent_velocity(r0, rho0, v0_specified)
+        
+        print(f"\n📊 RESULTS:")
+        print(f"   ✅ Parker-consistent velocity: {results['v0_correct']:.3f} m/s")
+        print(f"   ✅ Mass flow rate: {results['mass_flow_rate']:.2e} kg/s")
+        print(f"   ⚖️  Velocity ratio: {results['ratio']:.1f}×")
+        
+        return results
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return None
+
+# ============================================================================
+# EXAMPLE 2: MORE REALISTIC BOUNDARY CONDITIONS
+# ============================================================================
+
+def example_2_realistic_conditions():
+    """Test more realistic boundary conditions"""
+    print("=" * 60)
+    print("EXAMPLE 2: MORE REALISTIC CONDITIONS")
+    print("=" * 60)
+    
+    solver = ParkerWindShootingSolver()
+    
+    # MORE REALISTIC INPUTS
+    r0 = 6.96e8           # Still at solar surface
+    rho0 = 1e8 * m_p      # Same density
+    v0_specified = 10     # Much smaller velocity: 10 m/s
+    
+    print(f"\n🔧 YOUR INPUTS:")
+    print(f"   Boundary radius: {r0/6.96e8:.1f} R☉")
+    print(f"   Boundary density: {rho0/m_p:.0e} particles/cm³")
+    print(f"   Specified velocity: {v0_specified} m/s")
+    
+    try:
+        results = solver.find_parker_consistent_velocity(r0, rho0, v0_specified)
+        
+        print(f"\n📊 RESULTS:")
+        print(f"   ✅ Parker-consistent velocity: {results['v0_correct']:.3f} m/s")
+        print(f"   ✅ Mass flow rate: {results['mass_flow_rate']:.2e} kg/s")
+        print(f"   ⚖️  Velocity ratio: {results['ratio']:.1f}×")
+        
+        return results
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return None
+
+# ============================================================================
+# EXAMPLE 3: HIGHER ALTITUDE BOUNDARY
+# ============================================================================
+
+def example_3_higher_altitude():
+    """Test boundary conditions at higher altitude"""
+    print("=" * 60)
+    print("EXAMPLE 3: HIGHER ALTITUDE BOUNDARY")
+    print("=" * 60)
+    
+    solver = ParkerWindShootingSolver()
+    
+    # HIGHER ALTITUDE INPUTS
+    r0 = 3 * 6.96e8       # 3 solar radii
+    rho0 = 1e7 * m_p      # Lower density (expands with r²)
+    v0_specified = 10000  # 10 km/s (faster at higher altitude)
+    
+    print(f"\n🔧 YOUR INPUTS:")
+    print(f"   Boundary radius: {r0/6.96e8:.1f} R☉")
+    print(f"   Boundary density: {rho0/m_p:.0e} particles/cm³")
+    print(f"   Specified velocity: {v0_specified/1e3} km/s")
+    
+    try:
+        results = solver.find_parker_consistent_velocity(r0, rho0, v0_specified)
+        
+        print(f"\n📊 RESULTS:")
+        print(f"   ✅ Parker-consistent velocity: {results['v0_correct']:.1f} m/s")
+        print(f"   ✅ Mass flow rate: {results['mass_flow_rate']:.2e} kg/s")
+        print(f"   ⚖️  Velocity ratio: {results['ratio']:.1f}×")
+        
+        return results
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return None
+
+# ============================================================================
+# EXAMPLE 4: PARAMETER SWEEP
+# ============================================================================
+
+def example_4_parameter_sweep():
+    """Test multiple velocities to see how ratio changes"""
+    print("=" * 60)
+    print("EXAMPLE 4: PARAMETER SWEEP")
+    print("=" * 60)
+    
+    solver = ParkerWindShootingSolver()
+    
+    # Fixed boundary conditions
+    r0 = 6.96e8
+    rho0 = 1e8 * m_p
+    
+    # Test different velocities
+    velocities = [1, 10, 100, 1000, 10000]  # m/s
+    
+    print(f"\n🔧 TESTING DIFFERENT VELOCITIES:")
+    print(f"   Fixed: r0 = 1 R☉, ρ0 = 10⁸ cm⁻³")
+    print(f"   Variable: v0 = {velocities} m/s")
+    
+    results_list = []
+    
+    for v0 in velocities:
+        try:
+            print(f"\n   Testing v0 = {v0} m/s...")
+            results = solver.find_parker_consistent_velocity(r0, rho0, v0)
+            
+            if results:
+                ratio = results['ratio']
+                print(f"      → Ratio: {ratio:.1f}×")
+                results_list.append((v0, ratio, results['v0_correct']))
+            
+        except Exception as e:
+            print(f"      → Failed: {e}")
+    
+    print(f"\n📊 SUMMARY:")
+    print(f"   {'v0 (m/s)':<10} {'Ratio':<10} {'Parker v0 (m/s)':<15}")
+    print(f"   {'-'*35}")
+    for v0, ratio, v0_parker in results_list:
+        print(f"   {v0:<10} {ratio:<10.1f} {v0_parker:<15.3f}")
+    
+    return results_list
+
+# ============================================================================
+# EXAMPLE 5: CUSTOM INPUT FUNCTION
+# ============================================================================
+
+def example_5_custom_input():
+    """Interactive example - enter your own values"""
+    print("=" * 60)
+    print("EXAMPLE 5: ENTER YOUR OWN VALUES")
+    print("=" * 60)
+    
+    solver = ParkerWindShootingSolver()
+    
+    print(f"\n🔧 ENTER YOUR BOUNDARY CONDITIONS:")
+    
+    # Get user inputs (or set default values for testing)
+    # Uncomment these lines for interactive input:
+    # r_solar_radii = float(input("   Radius (in solar radii): "))
+    # density_particles = float(input("   Density (particles/cm³): "))
+    # velocity_ms = float(input("   Velocity (m/s): "))
+    
+    # Default values for demonstration:
+    r_solar_radii = 1.5
+    density_particles = 5e7
+    velocity_ms = 500
+    
+    # Convert to SI units
+    r0 = r_solar_radii * 6.96e8
+    rho0 = density_particles * m_p
+    v0_specified = velocity_ms
+    
+    print(f"\n   Using: {r_solar_radii} R☉, {density_particles:.0e} cm⁻³, {velocity_ms} m/s")
+    
+    try:
+        results = solver.find_parker_consistent_velocity(r0, rho0, v0_specified)
+        
+        print(f"\n📊 YOUR RESULTS:")
+        print(f"   ✅ Parker-consistent velocity: {results['v0_correct']:.3f} m/s")
+        print(f"   ✅ Mass flow rate: {results['mass_flow_rate']:.2e} kg/s")
+        print(f"   ⚖️  Velocity ratio: {results['ratio']:.1f}×")
+        
+        # Interpretation
+        if results['ratio'] < 2:
+            print(f"   🟢 GOOD: Your conditions are consistent with Parker wind!")
+        elif results['ratio'] < 10:
+            print(f"   🟡 MODERATE: Some discrepancy, additional physics may help")
+        else:
+            print(f"   🔴 LARGE: Significant discrepancy with Parker model")
+        
+        return results
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return None
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+if __name__ == "__main__":
+    print("PARKER WIND SHOOTING METHOD - EXAMPLES")
+    print("="*60)
+    print("Choose which example to run by uncommenting the appropriate line:\n")
+    
+    # UNCOMMENT THE EXAMPLE YOU WANT TO RUN:
+    
+    # Example 1: Your original conditions (expect large discrepancy)
+    example_1_original_conditions()
+    
+    # Example 2: More realistic conditions (expect better agreement)
+    # example_2_realistic_conditions()
+    
+    # Example 3: Higher altitude boundary (different physics regime)
+    # example_3_higher_altitude()
+    
+    # Example 4: Test multiple velocities (see how ratio scales)
+    # example_4_parameter_sweep()
+    
+    # Example 5: Enter your own custom values
+    # example_5_custom_input()
+    
+    print(f"\n" + "="*60)
+    print("TO USE THIS CODE:")
+    print("1. Copy the complete ParkerWindShootingSolver class")
+    print("2. Uncomment the example you want to run")
+    print("3. Modify the input values (r0, rho0, v0_specified)")
+    print("4. Run the script!")
+    print("="*60)
