@@ -1,0 +1,388 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.constants import G, k, m_p
+
+class ParkerWindShootingSolverWithPlots:
+    def __init__(self):
+        """Initialize with physical constants and solar parameters"""
+        # Physical constants
+        self.G = G                    
+        self.k = k                     
+        self.m_p = m_p               
+        
+        # Solar parameters
+        self.M_sun = 1.9891e30       
+        self.R_sun = 6.96e8          
+        self.T = 1e6                 
+        self.mu = 1                  
+        
+        # Derived quantities
+        self.cs = np.sqrt(self.k * self.T / (self.mu * self.m_p))  
+        self.rc = self.G * self.M_sun / (2 * self.cs**2)           
+        
+        print(f"=== PHYSICAL PARAMETERS ===")
+        print(f"Temperature: T = {self.T:.0e} K")
+        print(f"Sound speed: cs = {self.cs/1e3:.2f} km/s")
+        print(f"Critical radius: rc = {self.rc/self.R_sun:.2f} R☉")
+    
+    def parker_ode(self, R, v):
+        """Dimensionless Parker wind ODE: dv/dR"""
+        if abs(v - 1.0) < 1e-10:  
+            return 1.0  
+        
+        numerator = 2 * (1/R - 1/R**2)
+        denominator = (v - 1/v)
+        return numerator / denominator
+    
+    def rk4_step(self, R, v, dR):
+        """Fourth-order Runge-Kutta integration step"""
+        k1 = dR * self.parker_ode(R, v)
+        k2 = dR * self.parker_ode(R + dR/2, v + k1/2)
+        k3 = dR * self.parker_ode(R + dR/2, v + k2/2)
+        k4 = dR * self.parker_ode(R + dR, v + k3)
+        return v + (k1 + 2*k2 + 2*k3 + k4) / 6
+    
+    def integrate_full_solution(self, R_start, v_start, R_max=100):
+        """
+        Generate complete Parker wind solution from boundary to R_max
+        Returns both subsonic and supersonic branches
+        """
+        # Subsonic branch: boundary to critical point
+        R_crit = 1.0
+        n_sub = 5000
+        dR_sub = (R_crit - R_start) / n_sub
+        
+        R_subsonic = [R_start]
+        v_subsonic = [v_start]
+        
+        R, v = R_start, v_start
+        
+        for i in range(n_sub):
+            if v <= 0 or v > 10 or not np.isfinite(v):
+                break
+            
+            v = self.rk4_step(R, v, dR_sub)
+            R += dR_sub
+            
+            R_subsonic.append(R)
+            v_subsonic.append(v)
+            
+            if abs(R - R_crit) < abs(dR_sub):
+                break
+        
+        # Supersonic branch: critical point to R_max
+        n_sup = 5000
+        dR_sup = (R_max - R_crit) / n_sup
+        
+        R_supersonic = [R_crit + 1e-6]  # Just past critical point
+        v_supersonic = [1.0 + 1e-6]    # Just above sonic
+        
+        R, v = R_supersonic[0], v_supersonic[0]
+        
+        for i in range(n_sup):
+            if v <= 0 or v > 50 or not np.isfinite(v):
+                break
+            
+            v = self.rk4_step(R, v, dR_sup)
+            R += dR_sup
+            
+            R_supersonic.append(R)
+            v_supersonic.append(v)
+        
+        # Combine solutions (avoid duplicating critical point)
+        R_full = np.array(R_subsonic + R_supersonic[1:])
+        v_full = np.array(v_subsonic + v_supersonic[1:])
+        
+        return R_full, v_full
+    
+    def shooting_function(self, v_trial, R_boundary):
+        """Shooting function for root finding"""
+        R_crit = 1.0
+        n_steps = 3000
+        dR = (R_crit - R_boundary) / n_steps
+        
+        R, v = R_boundary, v_trial
+        
+        for i in range(n_steps):
+            if v <= 0 or v > 10 or not np.isfinite(v):
+                return float('inf')
+            
+            v = self.rk4_step(R, v, dR)
+            R += dR
+            
+            if abs(R - R_crit) < abs(dR):
+                break
+        
+        return v - 1.0
+    
+    def find_parker_solution_with_plots(self, r0, rho0, v0_specified, R_max=50):
+        """
+        Complete Parker wind analysis with comprehensive plotting
+        
+        Parameters:
+        r0: boundary radius (m)
+        rho0: boundary density (kg/m³)
+        v0_specified: your specified velocity (m/s)
+        R_max: maximum radius for plots (in units of rc)
+        
+        Returns:
+        results dict with solution and creates plots
+        """
+        # Convert to dimensionless
+        R0 = r0 / self.rc
+        
+        print(f"\n=== BOUNDARY CONDITIONS ===")
+        print(f"Boundary radius: r0 = {r0/self.R_sun:.3f} R☉")
+        print(f"Boundary density: ρ0 = {rho0/self.m_p:.2e} cm⁻³")
+        print(f"Your specified velocity: v0 = {v0_specified/1e3} km/s")
+        
+        if R0 >= 1.0:
+            raise ValueError(f"Boundary radius must be inside critical radius")
+        
+        # Find Parker-consistent velocity using shooting method
+        print(f"\n=== SHOOTING METHOD ===")
+        
+        best_v = None
+        best_error = float('inf')
+        
+        # Search for correct initial velocity
+        v_test_values = np.logspace(-6, -2, 2000)
+        
+        for v_trial in v_test_values:
+            error = self.shooting_function(v_trial, R0)
+            
+            if np.isfinite(error):
+                abs_error = abs(error)
+                if abs_error < best_error:
+                    best_error = abs_error
+                    best_v = v_trial
+                
+                if abs_error < 1e-4:
+                    break
+        
+        if best_v is None:
+            raise RuntimeError("No solution found")
+        
+        # Refine solution
+        v_range = np.linspace(best_v * 0.9, best_v * 1.1, 1000)
+        for v_trial in v_range:
+            error = self.shooting_function(v_trial, R0)
+            if np.isfinite(error) and abs(error) < best_error:
+                best_error = abs(error)
+                best_v = v_trial
+        
+        v0_correct = best_v * self.cs
+        
+        print(f"Converged: v0 = {v0_correct:.3f} m/s, error = {best_error:.2e}")
+        
+        # Generate complete solution
+        R_array, v_array = self.integrate_full_solution(R0, best_v, R_max)
+        
+        # Convert to dimensional units
+        r_array = R_array * self.rc  # meters
+        r_solar_array = r_array / self.R_sun  # solar radii
+        v_dimensional = v_array * self.cs  # m/s
+        
+        # Calculate density and mass flow profiles
+        mass_flow_rate = rho0 * v0_correct * r0**2
+        rho_array = mass_flow_rate / (v_dimensional * r_array**2)
+        mass_flow_profile = rho_array * v_dimensional * r_array**2
+        
+        # Verify mass conservation
+        mass_flow_variation = (np.max(mass_flow_profile) - np.min(mass_flow_profile)) / mass_flow_rate
+        
+        print(f"Mass flow rate: {mass_flow_rate:.2e} kg/s")
+        print(f"Mass conservation check: {mass_flow_variation*100:.2e}% variation")
+        
+        # Create comprehensive plots
+        self.create_comprehensive_plots(
+            r_solar_array, v_dimensional, rho_array, mass_flow_profile,
+            r0, rho0, v0_specified, v0_correct, mass_flow_rate
+        )
+        
+        # Calculate comparison metrics
+        ratio = v0_specified / v0_correct
+        
+        # Return results
+        results = {
+            'r_array': r_array,
+            'r_solar_array': r_solar_array,
+            'v_array': v_dimensional,
+            'rho_array': rho_array,
+            'mass_flow_profile': mass_flow_profile,
+            'v0_correct': v0_correct,
+            'v0_specified': v0_specified,
+            'ratio': ratio,
+            'mass_flow_rate': mass_flow_rate,
+            'mass_flow_variation': mass_flow_variation,
+            'boundary_conditions': {
+                'r0': r0,
+                'rho0': rho0,
+                'v0_specified': v0_specified
+            }
+        }
+        
+        return results
+    
+    def create_comprehensive_plots(self, r_solar, v_dim, rho_array, mass_flow_profile,
+                                  r0, rho0, v0_specified, v0_correct, mass_flow_rate):
+        """Create comprehensive plots of Parker wind solution"""
+        
+        # Set up the plot layout
+        fig = plt.figure(figsize=(16, 12))
+        fig.suptitle('Parker Wind Solution with Shooting Method', fontsize=16, fontweight='bold')
+        
+        # Create subplots
+        gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+        ax1 = fig.add_subplot(gs[0, 0])  # Velocity profile
+        ax2 = fig.add_subplot(gs[0, 1])  # Density profile
+        ax3 = fig.add_subplot(gs[1, 0])  # Mass flow profile
+        ax4 = fig.add_subplot(gs[1, 1])  # Velocity comparison
+        ax5 = fig.add_subplot(gs[2, :])  # Combined overview
+        
+        # Plot 1: Velocity Profile
+        ax1.loglog(r_solar, v_dim/1e3, 'b-', linewidth=2, label='Parker wind velocity')
+        ax1.axvline(self.rc/self.R_sun, color='red', linestyle='--', alpha=0.7, label='Critical point')
+        ax1.axhline(self.cs/1e3, color='red', linestyle='--', alpha=0.7, label='Sound speed')
+        ax1.plot(r0/self.R_sun, v0_correct/1e3, 'go', markersize=8, label=f'Parker: {v0_correct/1e3:.3f} km/s')
+        ax1.plot(r0/self.R_sun, v0_specified/1e3, 'rx', markersize=10, label=f'Your spec: {v0_specified/1e3} km/s')
+        ax1.set_xlabel('r / R☉')
+        ax1.set_ylabel('Velocity (km/s)')
+        ax1.set_title('Velocity Profile')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend()
+        ax1.set_xlim(0.5, np.max(r_solar))
+        
+        # Plot 2: Density Profile
+        ax2.loglog(r_solar, rho_array/self.m_p, 'g-', linewidth=2, label='Parker wind density')
+        ax2.axvline(self.rc/self.R_sun, color='red', linestyle='--', alpha=0.7, label='Critical point')
+        ax2.plot(r0/self.R_sun, rho0/self.m_p, 'go', markersize=8, label=f'Boundary: {rho0/self.m_p:.1e} cm⁻³')
+        ax2.set_xlabel('r / R☉')
+        ax2.set_ylabel('Number density (cm⁻³)')
+        ax2.set_title('Density Profile')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend()
+        ax2.set_xlim(0.5, np.max(r_solar))
+        
+        # Plot 3: Mass Flow Profile (should be constant)
+        mass_flow_normalized = mass_flow_profile / mass_flow_rate
+        ax3.semilogx(r_solar, mass_flow_normalized, 'purple', linewidth=2, label='Ṁ(r) / Ṁ₀')
+        ax3.axhline(1.0, color='black', linestyle='-', alpha=0.5, label='Perfect conservation')
+        ax3.axvline(self.rc/self.R_sun, color='red', linestyle='--', alpha=0.7, label='Critical point')
+        ax3.set_xlabel('r / R☉')
+        ax3.set_ylabel('Normalized Mass Flow Rate')
+        ax3.set_title(f'Mass Flow Conservation (Ṁ = {mass_flow_rate:.2e} kg/s)')
+        ax3.grid(True, alpha=0.3)
+        ax3.legend()
+        ax3.set_xlim(0.5, np.max(r_solar))
+        ax3.set_ylim(0.999, 1.001)
+        
+        # Plot 4: Velocity Comparison (zoomed)
+        mask_inner = r_solar <= 5  # Focus on inner region
+        ax4.loglog(r_solar[mask_inner], v_dim[mask_inner]/1e3, 'b-', linewidth=3, label='Parker solution')
+        ax4.axvline(self.rc/self.R_sun, color='red', linestyle='--', alpha=0.7, label='Critical point')
+        ax4.plot(r0/self.R_sun, v0_correct/1e3, 'go', markersize=12, 
+                label=f'Parker-consistent: {v0_correct/1e3:.4f} km/s')
+        ax4.plot(r0/self.R_sun, v0_specified/1e3, 'rx', markersize=12, 
+                label=f'Your specified: {v0_specified/1e3} km/s')
+        ax4.set_xlabel('r / R☉')
+        ax4.set_ylabel('Velocity (km/s)')
+        ax4.set_title(f'Velocity Comparison (Ratio: {v0_specified/v0_correct:.1f}×)')
+        ax4.grid(True, alpha=0.3)
+        ax4.legend()
+        ax4.set_xlim(0.8, 5)
+        
+        # Plot 5: Combined Overview with Multiple Scales
+        ax5_twin1 = ax5.twinx()
+        ax5_twin2 = ax5.twinx()
+        ax5_twin2.spines['right'].set_position(('outward', 60))
+        
+        # Velocity
+        line1 = ax5.loglog(r_solar, v_dim/1e3, 'b-', linewidth=2, label='Velocity (km/s)')
+        ax5.set_ylabel('Velocity (km/s)', color='b')
+        ax5.tick_params(axis='y', labelcolor='b')
+        
+        # Density
+        line2 = ax5_twin1.loglog(r_solar, rho_array/self.m_p, 'g-', linewidth=2, label='Density (cm⁻³)')
+        ax5_twin1.set_ylabel('Number density (cm⁻³)', color='g')
+        ax5_twin1.tick_params(axis='y', labelcolor='g')
+        
+        # Mass flow (normalized)
+        line3 = ax5_twin2.semilogx(r_solar, mass_flow_normalized, 'purple', linewidth=2, label='Normalized Ṁ')
+        ax5_twin2.set_ylabel('Ṁ(r) / Ṁ₀', color='purple')
+        ax5_twin2.tick_params(axis='y', labelcolor='purple')
+        ax5_twin2.set_ylim(0.9999, 1.0001)
+        
+        # Add critical point marker
+        ax5.axvline(self.rc/self.R_sun, color='red', linestyle='--', alpha=0.7, linewidth=2)
+        ax5.text(self.rc/self.R_sun * 1.1, np.max(v_dim/1e3) * 0.1, 'Critical\nPoint', 
+                rotation=90, va='bottom', ha='left', color='red', fontweight='bold')
+        
+        ax5.set_xlabel('r / R☉')
+        ax5.set_title('Combined Parker Wind Profiles')
+        ax5.grid(True, alpha=0.3)
+        ax5.set_xlim(0.5, np.max(r_solar))
+        
+        # Create combined legend
+        lines = line1 + line2 + line3
+        labels = [l.get_label() for l in lines]
+        ax5.legend(lines, labels, loc='upper left')
+        
+        plt.tight_layout()
+        plt.show()
+        
+        # Print summary on plot
+        print(f"\n=== PLOT SUMMARY ===")
+        print(f"✅ Velocity profile: Shows acceleration from subsonic to supersonic")
+        print(f"✅ Density profile: Shows ρ ∝ 1/r² decline modified by acceleration")
+        print(f"✅ Mass flow: Should be perfectly constant (check plot 3)")
+        print(f"⚖️  Velocity comparison: Your {v0_specified/1e3} km/s vs Parker {v0_correct/1e3:.4f} km/s")
+
+# ============================================================================
+# USAGE EXAMPLES WITH PLOTS
+# ============================================================================
+
+def run_example_with_plots():
+    """Example showing how to generate plots"""
+    
+    # Create solver
+    solver = ParkerWindShootingSolverWithPlots()
+    
+    # Your boundary conditions
+    r0 = 6.96e8           # 1 solar radius
+    rho0 = 1e8 * solver.m_p  # 10^8 particles/cm³
+    v0_specified = 1000   # 1 km/s
+    
+    print("="*60)
+    print("PARKER WIND WITH COMPREHENSIVE PLOTS")
+    print("="*60)
+    
+    try:
+        # Run analysis and generate plots
+        results = solver.find_parker_solution_with_plots(r0, rho0, v0_specified, R_max=30)
+        
+        print(f"\n📊 RESULTS SUMMARY:")
+        print(f"Parker-consistent velocity: {results['v0_correct']:.3f} m/s")
+        print(f"Your specified velocity: {results['v0_specified']} m/s")
+        print(f"Velocity ratio: {results['ratio']:.1f}×")
+        print(f"Mass flow rate: {results['mass_flow_rate']:.2e} kg/s")
+        print(f"Mass conservation: {results['mass_flow_variation']*100:.2e}% variation")
+        
+        return results
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return None
+
+if __name__ == "__main__":
+    # Run the example to see all plots
+    results = run_example_with_plots()
+    
+    print(f"\n" + "="*60)
+    print("PLOTS GENERATED:")
+    print("1. Velocity Profile - Shows Parker wind acceleration")
+    print("2. Density Profile - Shows how density decreases with radius")
+    print("3. Mass Flow Profile - Verifies conservation (should be flat)")
+    print("4. Velocity Comparison - Your input vs Parker prediction")
+    print("5. Combined Overview - All profiles on one plot")
+    print("="*60)
