@@ -1,3 +1,3 @@
 # Solar-Corona-Project
 
-My work on modelling the solar corona using 1D MHD equations to find the radial velocity, density and temperature profiles of coronal plasma. This project was supervised informally by Professor Eduard Kontar of the University of Glasgow Astronomy and Astrophysics group.
+My work on solving the Parker solar wind equation using the RK4 method. The Parker equation takes the form of $\frac{1}{v}$
